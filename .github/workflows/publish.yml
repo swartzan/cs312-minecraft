@@ -1,0 +1,49 @@
+name: Publish Minecraft Image to ECR
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on tags starting with v (e.g., v1.0, v2.1)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, Tag, and Push Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: minecraft_ops # Must match your ECR repo name exactly
+          IMAGE_TAG: latest
+        run: |
+          # If you have a Dockerfile, build it. 
+          # Otherwise, pull and re-tag a pinned image (e.g., itzg/minecraft-server)
+          docker pull itzg/minecraft-server:latest
+          docker tag itzg/minecraft-server:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Smoke Test
+        run: |
+          docker run -d --name test-server -e EULA=TRUE -p 25565:25565 itzg/minecraft-server:latest
+          sleep 30
+          if docker ps | grep test-server; then
+            echo "Smoke test passed: Container is running."
+            docker stop test-server
+          else
+            echo "Smoke test failed: Container crashed."
+            exit 1
+          fi

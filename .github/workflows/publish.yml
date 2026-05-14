@@ -3,7 +3,7 @@ name: Publish Minecraft Image to ECR
 on:
   push:
     tags:
-      - 'v*' # Triggers on tags starting with v (e.g., v1.0, v2.1)
+      - 'v*' 
 
 jobs:
   publish:
@@ -27,7 +27,7 @@ jobs:
       - name: Build, Tag, and Push Image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: minecraft_ops # Must match your ECR repo name exactly
+          ECR_REPOSITORY: minecraft_ops 
           IMAGE_TAG: latest
         run: |
           # If you have a Dockerfile, build it. 
